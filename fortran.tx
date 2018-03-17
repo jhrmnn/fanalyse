@@ -1,0 +1,41 @@
+/* FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?/ ; */
+
+ProgramUnit:
+    type=UnitType name=ID ('(' parameters*=Expression[','] ')')? ('result' '(' ID ')')?
+    imports=UseStatement*
+    ('implicit' 'none')?
+    declarations=DeclarationStatement*
+    body=ExecutableStatement*
+    ('contains'
+    contains*=ProgramUnit)?
+    'end' UnitType ID?
+;
+UnitType: 'program' | 'subroutine' | 'module' | 'function' ;
+UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])? ;
+DeclarationStatement: VariableDeclaration | InterfaceDeclaration ;
+VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] ;
+InterfaceDeclaration: 'interface' name=ID ('module' 'procedure' funcs=ID)+ 'end' 'interface' ;
+TypeModifier: 'intent' '(' /in|out|inout/ ')' | 'parameter' | 'allocatable' | 'optional' ;
+Type: ('integer' | 'logical' | 'character' | 'real') ('*' INT | '(' (INT | 'len' '=' (INT | '*'))+ ')')? ;
+VariableNameDefault: name=ID ('(' dimensions+=Dimension[','] ')')? ('=' value=Expression)? ;
+Dimension: (Expression ':')? Expression | ':';
+ExecutableStatement: CallStatement | IfStatement | IfStatementSingle | Assignment | WriteStatement | DoStatement | 'stop' | 'cycle' ;
+CallStatement: 'call' subroutine=ID ('(' parameters*=Expression[','] ')')? ;
+IfStatement: 'if' branches=Branch (/else *if/ branches=Branch)* ('else' branches=DefaultBranch)? 'end' 'if' ;
+Branch: '(' condition=Expression ')' 'then' body=ExecutableStatement* ;
+DefaultBranch: body=ExecutableStatement* ;
+IfStatementSingle: 'if' '(' condition=Expression ')' body=ExecutableStatement ;
+Assignment: target=ID '=' value=Expression ;
+WriteStatement: 'write' '(' unit=Expression ',' format=Format ')' args*=Expression[','] ;
+Format: Expression | '*';
+DoStatement: 'do' ('while' '(' condition=Expression ')' | ID '=' Expression ',' Expression )? body=ExecutableStatement* 'end' 'do' ;
+Term: FunctionCall | Array | FLOAT_ | INT | ID | STRING | BOOL_ | (Unary Term) | '(' Expression ')' ;
+FunctionCall: ID '(' parameters*=FunctionCallParameter[','] ')' ;
+FunctionCallParameter: Expression | Dimension ;
+Array: '(/' Expression*[','] '/)' ;
+Expression: Term (Operator Term)* ;
+Operator: /.gt.|.or.|.and.|.eq.|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/ ;
+Unary: /.not.|-/ ;
+BOOL_: /.true.|.false./ ;
+FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?/ ;
+Comment: /!.*$/ ;
