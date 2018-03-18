@@ -1,17 +1,16 @@
 ProgramUnit:
-    Type? 'elemental'? type=UnitType name=UnitID ('(' parameters*=ID[','] ')')? ('result' '(' ID ')')? EOL
+    Type? 'elemental'? type=UnitType name=ID ('(' parameters*=ID[','] ')')? ('result' '(' ID ')')? EOL
     imports=UseStatement*
     ('implicit' 'none' EOL)?
     declarations=DeclarationStatement*
     body=ExecutableStatement*
     ('contains' EOL
     contains*=ProgramUnit)?
-    'end' UnitType UnitID? EOL
+    'end' UnitType ID? EOL
 ;
 
 Type: /double *precision|integer|logical|character|real|complex/ ('*' INT | '(' (('len' '=')? (Expression | '*'))+ ')')?;
 UnitType: /program|subroutine|module|function/;
-UnitID: !(UnitType | Type | 'end') ID;
 
 UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])? EOL;
 
