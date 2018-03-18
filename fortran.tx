@@ -1,19 +1,19 @@
 ProgramUnit:
-    Type? 'elemental'? type=UnitType name=UnitID('(' parameters*=ID[','] ')')? ('result' '(' ID ')')?
+    Type? 'elemental'? type=UnitType name=UnitID ('(' parameters*=ID[','] ')')? ('result' '(' ID ')')? EOL
     imports=UseStatement*
-    ('implicit' 'none')?
+    ('implicit' 'none' EOL)?
     declarations=DeclarationStatement*
     body=ExecutableStatement*
-    ('contains'
+    ('contains' EOL
     contains*=ProgramUnit)?
-    'end' UnitType UnitID?
+    'end' UnitType UnitID? EOL
 ;
 UnitID: !(UnitType | Type | 'end') ID;
 UnitType: /program|subroutine|module|function/;
-UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])?;
+UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])? EOL;
 DeclarationStatement: VariableDeclaration | InterfaceDeclaration;
-VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','];
-InterfaceDeclaration: 'interface' name=ID ('module' 'procedure' funcs=ID)+ 'end' 'interface';
+VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] EOL;
+InterfaceDeclaration: 'interface' name=ID EOL ('module' 'procedure' funcs=ID EOL)+ 'end' 'interface' EOL;
 TypeModifier:
     'intent' '(' /inout|in|out/ ')' |
     'dimension' '(' dimensions+=DimensionSpec[','] ')' |
@@ -22,7 +22,7 @@ TypeModifier:
 Type: /double *precision|integer|logical|character|real|complex/ ('*' INT | '(' (('len' '=')? (Expression | '*'))+ ')')?;
 VariableNameDefault: name=ID ('(' dimensions+=DimensionSpec[','] ')')? ('=' value=Expression)?;
 DimensionSpec: (from=Expression ':')? to=Expression | ':';
-ExecutableStatement:
+ExecutableStatement: (
     CallStatement | IfBlock | SelectBlock | IfStatement |
     WriteStatement | DoBlock | ForallBlock | ForallStatement |
     AllocateStatement | DeallocateStatement |
@@ -30,7 +30,7 @@ ExecutableStatement:
     OpenStatement | ReadStatement | CloseStatement |
     InquireStatement |
     PointerAssignment | Assignment | /stop|cycle|exit|return/
-;
+) EOL;
 OpenStatement: 'open' '(' parameters*=Parameter[','] ')';
 ReadStatement: 'read' '(' ID ')' vars+=LHS[','];
 CloseStatement: 'close' '(' parameters*=Parameter[','] ')';
@@ -40,9 +40,9 @@ DeallocateStatement: 'deallocate' '(' parameters+=DeallocateArgument[','] ')';
 DeallocateArgument: DeallocateParameter | ID;
 DeallocateParameter: 'stat' '=' ID;
 WhereStatement: 'where' '(' Expression ')' body=ExecutableStatement;
-WhereBlock: 'where' '(' Expression ')' body*=ExecutableStatement 'end' 'where';
+WhereBlock: 'where' '(' Expression ')' EOL body*=ExecutableStatement 'end' 'where';
 ForallStatement: 'forall' '(' iters+=IterSpec[','] ')' body=ExecutableStatement;
-ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' body*=ExecutableStatement 'end' 'forall';
+ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' EOL body*=ExecutableStatement 'end' 'forall';
 IterSpec: itervar=ID '=' slice=Slice;
 CallStatement: 'call' subroutine=ID ('(' parameters*=Parameter[','] ')')?;
 IfBlock :
@@ -52,13 +52,13 @@ IfBlock :
     'end' 'if'
 ;
 SelectBlock:
-    /select *case/ '(' condition=Expression ')'
+    /select *case/ '(' condition=Expression ')' EOL
     branches*=Case
     'end' 'select'
 ;
-Case: 'case' ('(' case=CaseValue ')' | 'default') body=ExecutableStatement*;
+Case: 'case' ('(' case=CaseValue ')' | 'default') EOL body=ExecutableStatement*;
 CaseValue: INT | STRING ;
-Branch: ('(' condition=Expression ')' 'then')? body=ExecutableStatement*;
+Branch: ('(' condition=Expression ')' 'then')? EOL body=ExecutableStatement*;
 IfStatement: 'if' '(' condition=Expression ')' body=ExecutableStatement;
 Assignment: target=LHS '=' value=Expression;
 PointerAssignment: pointer=ID '=>' target=LHS;
@@ -66,7 +66,7 @@ LHS: ArrayCall | ID;
 WriteStatement: 'write' '(' unit=Expression (',' format=Format)? ')' args*=Expression[','];
 Format: Expression | '*';
 DoBlock :
-    'do' ('while' '(' condition=Expression ')' | ID '=' from=Expression ',' to=Expression (',' by=Expression)?)?
+    'do' ('while' '(' condition=Expression ')' | ID '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
         body=ExecutableStatement*
     'end' 'do'
 ;
@@ -88,4 +88,5 @@ Operator: /\.gt\.|\.or\.|\.and\.|\.eq\.|\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
 Unary: /\.not\.|-/;
 BOOL_: /\.true\.|\.false\./;
 FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
-Comment: /!.*$/;
+Comment: /!.*$|& *(!.*)?\n *&?/;
+EOL: (/\n\s*/)*;

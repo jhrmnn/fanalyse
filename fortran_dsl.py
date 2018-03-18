@@ -15,7 +15,7 @@ _fortran_mm = metamodel_from_file(
     # },
     # auto_init_attributes=False
     ignore_case=True,
-    ws='\t\n\r &',
+    ws='\t ',
 )
 # _parsed: Dict[str, Dict[str, Any]] = {}
 
