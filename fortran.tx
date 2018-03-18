@@ -8,42 +8,33 @@ ProgramUnit:
     contains*=ProgramUnit)?
     'end' UnitType UnitID? EOL
 ;
-UnitID: !(UnitType | Type | 'end') ID;
+
+Type: /double *precision|integer|logical|character|real|complex/ ('*' INT | '(' (('len' '=')? (Expression | '*'))+ ')')?;
 UnitType: /program|subroutine|module|function/;
+UnitID: !(UnitType | Type | 'end') ID;
+
 UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])? EOL;
+
 DeclarationStatement: VariableDeclaration | InterfaceDeclaration;
 VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] EOL;
-InterfaceDeclaration: 'interface' name=ID EOL ('module' 'procedure' funcs=ID EOL)+ 'end' 'interface' EOL;
 TypeModifier:
     'intent' '(' /inout|in|out/ ')' |
     'dimension' '(' dimensions+=DimensionSpec[','] ')' |
     /parameter|allocatable|optional|target|pointer|save/
 ;
-Type: /double *precision|integer|logical|character|real|complex/ ('*' INT | '(' (('len' '=')? (Expression | '*'))+ ')')?;
 VariableNameDefault: name=ID ('(' dimensions+=DimensionSpec[','] ')')? ('=' value=Expression)?;
 DimensionSpec: (from=Expression ':')? to=Expression | ':';
+InterfaceDeclaration: 'interface' name=ID EOL ('module' 'procedure' funcs=ID EOL)+ 'end' 'interface' EOL;
+
 ExecutableStatement: (
-    CallStatement | IfBlock | SelectBlock | IfStatement |
-    WriteStatement | DoBlock | ForallBlock | ForallStatement |
-    AllocateStatement | DeallocateStatement |
+    CallStatement | IfBlock | IfStatement | SelectBlock |
+    DoBlock | ForallBlock | ForallStatement |
     WhereBlock | WhereStatement |
-    OpenStatement | ReadStatement | CloseStatement |
+    AllocateStatement | DeallocateStatement |
+    OpenStatement | WriteStatement | ReadStatement | CloseStatement |
     InquireStatement |
     PointerAssignment | Assignment | /stop|cycle|exit|return/
 ) EOL;
-OpenStatement: 'open' '(' parameters*=Parameter[','] ')';
-ReadStatement: 'read' '(' ID ')' vars+=LHS[','];
-CloseStatement: 'close' '(' parameters*=Parameter[','] ')';
-InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')';
-AllocateStatement: 'allocate' '(' variables+=VariableNameDefault[','] ')';
-DeallocateStatement: 'deallocate' '(' parameters+=DeallocateArgument[','] ')';
-DeallocateArgument: DeallocateParameter | ID;
-DeallocateParameter: 'stat' '=' ID;
-WhereStatement: 'where' '(' Expression ')' body=ExecutableStatement;
-WhereBlock: 'where' '(' Expression ')' EOL body*=ExecutableStatement 'end' 'where';
-ForallStatement: 'forall' '(' iters+=IterSpec[','] ')' body=ExecutableStatement;
-ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' EOL body*=ExecutableStatement 'end' 'forall';
-IterSpec: itervar=ID '=' slice=Slice;
 CallStatement: 'call' subroutine=ID ('(' parameters*=Parameter[','] ')')?;
 IfBlock :
     'if' branches=Branch
@@ -51,42 +42,57 @@ IfBlock :
     ('else' branches=Branch)?
     'end' 'if'
 ;
+IfStatement: 'if' '(' condition=Expression ')' body=ExecutableStatement;
 SelectBlock:
     /select *case/ '(' condition=Expression ')' EOL
     branches*=Case
     'end' 'select'
 ;
-Case: 'case' ('(' case=CaseValue ')' | 'default') EOL body=ExecutableStatement*;
-CaseValue: INT | STRING ;
-Branch: ('(' condition=Expression ')' 'then')? EOL body=ExecutableStatement*;
-IfStatement: 'if' '(' condition=Expression ')' body=ExecutableStatement;
-Assignment: target=LHS '=' value=Expression;
-PointerAssignment: pointer=ID '=>' target=LHS;
-LHS: ArrayCall | ID;
-WriteStatement: 'write' '(' unit=Expression (',' format=Format)? ')' args*=Expression[','];
-Format: Expression | '*';
 DoBlock :
     'do' ('while' '(' condition=Expression ')' | ID '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
         body=ExecutableStatement*
     'end' 'do'
 ;
+ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' EOL body*=ExecutableStatement 'end' 'forall';
+ForallStatement: 'forall' '(' iters+=IterSpec[','] ')' body=ExecutableStatement;
+WhereBlock: 'where' '(' Expression ')' EOL body*=ExecutableStatement 'end' 'where';
+WhereStatement: 'where' '(' Expression ')' body=ExecutableStatement;
+AllocateStatement: 'allocate' '(' variables+=VariableNameDefault[','] ')';
+DeallocateStatement: 'deallocate' '(' parameters+=Parameter[','] ')';
+OpenStatement: 'open' '(' parameters*=Parameter[','] ')';
+WriteStatement: 'write' '(' unit=Expression (',' format=Format)? ')' args*=Expression[','];
+ReadStatement: 'read' '(' ID ')' vars+=LHS[','];
+CloseStatement: 'close' '(' parameters*=Parameter[','] ')';
+InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')';
+PointerAssignment: pointer=ID '=>' target=LHS;
+Assignment: target=LHS '=' value=Expression;
+
+Parameter: (name=ID '=')? value=Expression;
+Branch: ('(' condition=Expression ')' 'then')? EOL body=ExecutableStatement*;
+Case: 'case' ('(' case=CaseValue ')' | 'default') EOL body=ExecutableStatement*;
+CaseValue: INT | STRING ;
+IterSpec: itervar=ID '=' slice=Slice;
+Format: Expression | '*';
+LHS: ArrayCall | ID;
+
+Expression: operands=Term (operators=Operator operands=Term)*;
 Term:
     FunctionCall | ArrayCall | Array | FLOAT_ | INT | ID |
     STRING | BOOL_ | UnaryTerm | Parenthesised
 ;
-Parenthesised: '(' inner=Expression ')';
-UnaryTerm: operator=Unary operand=Term;
 FunctionCall: function=ID '(' parameters*=Parameter[','] ')';
-Parameter: (name=ID '=')? value=Expression;
 ArrayCall: variable=ID '(' parameters*=Slice[','] ')';
 Slice: (from=Expression? ':' to=Expression? (':' by=Expression)?) | to=Expression;
-Array: '(/' members*=ArrayMemmber[','] '/)';
-ArrayMemmber: Iterator | Expression;
+Array: '(/' members*=ArrayMember[','] '/)';
+ArrayMember: Iterator | Expression;
 Iterator: '(' value=Expression ',' var=ID '=' from=Expression ',' to=Expression ')';
-Expression: operands=Term (operators=Operator operands=Term)*;
-Operator: /\.gt\.|\.or\.|\.and\.|\.eq\.|\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
+UnaryTerm: operator=Unary operand=Term;
 Unary: /\.not\.|-/;
+Parenthesised: '(' inner=Expression ')';
+Operator: /\.gt\.|\.or\.|\.and\.|\.eq\.|\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
+
 BOOL_: /\.true\.|\.false\./;
 FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
+
 Comment: /!.*$|& *(!.*)?\n *&?/;
 EOL: (/\n\s*/)*;
