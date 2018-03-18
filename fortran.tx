@@ -1,41 +1,91 @@
-/* FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?/ ; */
-
 ProgramUnit:
-    type=UnitType name=ID ('(' parameters*=Expression[','] ')')? ('result' '(' ID ')')?
+    Type? 'elemental'? type=UnitType name=UnitID('(' parameters*=ID[','] ')')? ('result' '(' ID ')')?
     imports=UseStatement*
     ('implicit' 'none')?
     declarations=DeclarationStatement*
     body=ExecutableStatement*
     ('contains'
     contains*=ProgramUnit)?
-    'end' UnitType ID?
+    'end' UnitType UnitID?
 ;
-UnitType: 'program' | 'subroutine' | 'module' | 'function' ;
-UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])? ;
-DeclarationStatement: VariableDeclaration | InterfaceDeclaration ;
-VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] ;
-InterfaceDeclaration: 'interface' name=ID ('module' 'procedure' funcs=ID)+ 'end' 'interface' ;
-TypeModifier: 'intent' '(' /in|out|inout/ ')' | 'parameter' | 'allocatable' | 'optional' ;
-Type: ('integer' | 'logical' | 'character' | 'real') ('*' INT | '(' (INT | 'len' '=' (INT | '*'))+ ')')? ;
-VariableNameDefault: name=ID ('(' dimensions+=Dimension[','] ')')? ('=' value=Expression)? ;
-Dimension: (Expression ':')? Expression | ':';
-ExecutableStatement: CallStatement | IfStatement | IfStatementSingle | Assignment | WriteStatement | DoStatement | 'stop' | 'cycle' ;
-CallStatement: 'call' subroutine=ID ('(' parameters*=Expression[','] ')')? ;
-IfStatement: 'if' branches=Branch (/else *if/ branches=Branch)* ('else' branches=DefaultBranch)? 'end' 'if' ;
-Branch: '(' condition=Expression ')' 'then' body=ExecutableStatement* ;
-DefaultBranch: body=ExecutableStatement* ;
-IfStatementSingle: 'if' '(' condition=Expression ')' body=ExecutableStatement ;
-Assignment: target=ID '=' value=Expression ;
-WriteStatement: 'write' '(' unit=Expression ',' format=Format ')' args*=Expression[','] ;
+UnitID: !(UnitType | Type | 'end') ID;
+UnitType: /program|subroutine|module|function/;
+UseStatement: 'use' module=ID (',' 'only' ':' names+=ID[','])?;
+DeclarationStatement: VariableDeclaration | InterfaceDeclaration;
+VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','];
+InterfaceDeclaration: 'interface' name=ID ('module' 'procedure' funcs=ID)+ 'end' 'interface';
+TypeModifier:
+    'intent' '(' /inout|in|out/ ')' |
+    'dimension' '(' dimensions+=DimensionSpec[','] ')' |
+    /parameter|allocatable|optional|target|pointer|save/
+;
+Type: /double *precision|integer|logical|character|real|complex/ ('*' INT | '(' (('len' '=')? (Expression | '*'))+ ')')?;
+VariableNameDefault: name=ID ('(' dimensions+=DimensionSpec[','] ')')? ('=' value=Expression)?;
+DimensionSpec: (from=Expression ':')? to=Expression | ':';
+ExecutableStatement:
+    CallStatement | IfBlock | SelectBlock | IfStatement |
+    WriteStatement | DoBlock | ForallBlock | ForallStatement |
+    AllocateStatement | DeallocateStatement |
+    WhereBlock | WhereStatement |
+    OpenStatement | ReadStatement | CloseStatement |
+    InquireStatement |
+    PointerAssignment | Assignment | /stop|cycle|exit|return/
+;
+OpenStatement: 'open' '(' parameters*=Parameter[','] ')';
+ReadStatement: 'read' '(' ID ')' vars+=LHS[','];
+CloseStatement: 'close' '(' parameters*=Parameter[','] ')';
+InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')';
+AllocateStatement: 'allocate' '(' variables+=VariableNameDefault[','] ')';
+DeallocateStatement: 'deallocate' '(' parameters+=DeallocateArgument[','] ')';
+DeallocateArgument: DeallocateParameter | ID;
+DeallocateParameter: 'stat' '=' ID;
+WhereStatement: 'where' '(' Expression ')' body=ExecutableStatement;
+WhereBlock: 'where' '(' Expression ')' body*=ExecutableStatement 'end' 'where';
+ForallStatement: 'forall' '(' iters+=IterSpec[','] ')' body=ExecutableStatement;
+ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' body*=ExecutableStatement 'end' 'forall';
+IterSpec: itervar=ID '=' slice=Slice;
+CallStatement: 'call' subroutine=ID ('(' parameters*=Parameter[','] ')')?;
+IfBlock :
+    'if' branches=Branch
+    (/else *if/ branches=Branch)*
+    ('else' branches=Branch)?
+    'end' 'if'
+;
+SelectBlock:
+    /select *case/ '(' condition=Expression ')'
+    branches*=Case
+    'end' 'select'
+;
+Case: 'case' ('(' case=CaseValue ')' | 'default') body=ExecutableStatement*;
+CaseValue: INT | STRING ;
+Branch: ('(' condition=Expression ')' 'then')? body=ExecutableStatement*;
+IfStatement: 'if' '(' condition=Expression ')' body=ExecutableStatement;
+Assignment: target=LHS '=' value=Expression;
+PointerAssignment: pointer=ID '=>' target=LHS;
+LHS: ArrayCall | ID;
+WriteStatement: 'write' '(' unit=Expression (',' format=Format)? ')' args*=Expression[','];
 Format: Expression | '*';
-DoStatement: 'do' ('while' '(' condition=Expression ')' | ID '=' Expression ',' Expression )? body=ExecutableStatement* 'end' 'do' ;
-Term: FunctionCall | Array | FLOAT_ | INT | ID | STRING | BOOL_ | (Unary Term) | '(' Expression ')' ;
-FunctionCall: ID '(' parameters*=FunctionCallParameter[','] ')' ;
-FunctionCallParameter: Expression | Dimension ;
-Array: '(/' Expression*[','] '/)' ;
-Expression: Term (Operator Term)* ;
-Operator: /.gt.|.or.|.and.|.eq.|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/ ;
-Unary: /.not.|-/ ;
-BOOL_: /.true.|.false./ ;
-FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?/ ;
-Comment: /!.*$/ ;
+DoBlock :
+    'do' ('while' '(' condition=Expression ')' | ID '=' from=Expression ',' to=Expression (',' by=Expression)?)?
+        body=ExecutableStatement*
+    'end' 'do'
+;
+Term:
+    FunctionCall | ArrayCall | Array | FLOAT_ | INT | ID |
+    STRING | BOOL_ | UnaryTerm | Parenthesised
+;
+Parenthesised: '(' inner=Expression ')';
+UnaryTerm: operator=Unary operand=Term;
+FunctionCall: function=ID '(' parameters*=Parameter[','] ')';
+Parameter: (name=ID '=')? value=Expression;
+ArrayCall: variable=ID '(' parameters*=Slice[','] ')';
+Slice: (from=Expression? ':' to=Expression? (':' by=Expression)?) | to=Expression;
+Array: '(/' members*=ArrayMemmber[','] '/)';
+ArrayMemmber: Iterator | Expression;
+Iterator: '(' value=Expression ',' var=ID '=' from=Expression ',' to=Expression ')';
+Expression: operands=Term (operators=Operator operands=Term)*;
+Operator: /\.gt\.|\.or\.|\.and\.|\.eq\.|\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
+Unary: /\.not\.|-/;
+BOOL_: /\.true\.|\.false\./;
+FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
+Comment: /!.*$/;
