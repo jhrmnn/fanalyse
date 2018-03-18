@@ -23,7 +23,11 @@ TypeModifier:
 ;
 VariableNameDefault: name=ID ('(' dimensions+=DimensionSpec[','] ')')? ('=' value=Expression)?;
 DimensionSpec: (from=Expression ':')? to=Expression | ':';
-InterfaceDeclaration: 'interface' name=ID EOL ('module' 'procedure' funcs=ID EOL)+ 'end' 'interface' EOL;
+InterfaceDeclaration:
+    'interface' ('operator' '(' operator=CustomOperator ')' | name=ID) EOL
+    ('module' 'procedure' funcs=ID EOL)+
+    'end' 'interface' EOL
+;
 
 ExecutableStatement: (
     CallStatement | IfBlock | IfStatement | SelectBlock |
@@ -88,7 +92,8 @@ Iterator: '(' value=Expression ',' var=ID '=' from=Expression ',' to=Expression 
 UnaryTerm: operator=Unary operand=Term;
 Unary: /\.not\.|-/;
 Parenthesised: '(' inner=Expression ')';
-Operator: /\.gt\.|\.or\.|\.and\.|\.eq\.|\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
+CustomOperator: /\.[a-z]+\./;
+Operator: CustomOperator | /\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
 
 BOOL_: /\.true\.|\.false\./;
 FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
