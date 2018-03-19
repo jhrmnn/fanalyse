@@ -1,80 +1,105 @@
+File: ProgramUnit+;
 ProgramUnit:
     EOL?
-    Type? 'elemental'? type=UnitType name=ID_ ('(' parameters*=ID_[','] ')')? ('result' '(' ID_ ')')? EOL
+    (Type | /recursive|elemental|pure/)* type=UnitType name=ID_ ('(' parameters*=ID_[','] ')')?
+    ('result' '(' ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')? EOL
     imports=UseStatement*
-    ('implicit' 'none' EOL)?
+    ('implicit' ('none' | Type '(' /[a-z]-[a-z]/+[','] ')') EOL)?
     declarations=DeclarationStatement*
     body=ExecutableStatement*
     ('contains' EOL
     contains*=ProgramUnit)?
-    'end' UnitType ID_? EOL
+    'end' (UnitType ID_?)? EOL
 ;
 
-Type: TypeName ('*' INT | '(' ('kind' '=' Expression | ('len' '=')? (Expression | '*'))+ ')')?;
-TypeName: 'double' 'precision' | /integer|logical|character|real|complex/ | CustomTypeName;
+Type: TypeName ('*' (INT | '(' '*' ')') | '(' ('kind' '=' Expression | ('len' '=')? (Expression | '*' | ':'))+[','] ')')?;
+TypeName: 'double' ('precision' | 'complex') | /integer|logical|character|real|complex/ | CustomTypeName;
 CustomTypeName: 'type' '(' name=ID_ ')';
 UnitType: /program|subroutine|module|function/;
 
-UseStatement: 'use' module=ID_ (',' 'only' ':' names+=FunctionName[','])? EOL;
+UseStatement: 'use' (',' 'intrinsic' '::')? module=ID_ (',' 'only' ':' names+=Rename[','])? EOL;
+Rename: FunctionName ('=>' FunctionName)?;
 
 DeclarationStatement:
-    ScopeDeclaration | InterfaceDeclaration | CustomTypeDeclaration |
-    ExternalDeclaration |
-    VariableDeclaration
+    ScopeDeclaration | ModuleInterface | InterfaceBlock | CustomTypeDeclaration |
+    ExternalDeclaration | SaveDeclaration | DimensionStatement |
+    ParameterStatement | IncludeStatement |
+    VariableDeclaration |
+    StatementFunction
 ;
-ScopeDeclaration: scope='private' EOL | scope='public' '::' names+=FunctionName[','] EOL;
-InterfaceDeclaration:
+ScopeDeclaration: scope='private' EOL | scope='public' '::'? names+=FunctionName[','] EOL;
+ModuleInterface:
     'interface' FunctionName EOL
-    ('module' 'procedure' funcs=ID_ EOL)+
+    ('module' 'procedure' funcs+=ID_[','] EOL)+
+    'end' 'interface' FunctionName? EOL
+;
+InterfaceBlock:
+    'interface' EOL
+    headers+=FunctionHeader
     'end' 'interface' EOL
 ;
 CustomTypeDeclaration:
-    'type' '::' name=ID_ EOL
-    attributes*=VariableDeclaration
+    'type' '::'? name=ID_ EOL
+    attributes*=DeclarationStatement
     'end' 'type' ID_? EOL
 ;
-ExternalDeclaration: 'external' '::' names+=ID_[','] EOL;
+ExternalDeclaration: 'external' '::'? names+=ID_[','] EOL;
+SaveDeclaration: 'save' EOL;
+DimensionStatement: 'dimension' variables+=VariableNameDefault[','] EOL;
+ParameterStatement: 'parameter' '(' variables+=VariableNameDefault[','] ')' EOL;
+IncludeStatement: 'include' STRING EOL;
 VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] EOL;
 TypeModifier:
-    'intent' '(' /inout|in|out/ ')' |
+    'intent' '(' ('in' 'out' | 'in' | 'out') ')' |
     'dimension' '(' dimensions+=DimensionSpec[','] ')' |
-    /parameter|allocatable|optional|target|pointer|save/
+    /parameter|allocatable|optional|target|pointer|save|value|public|private|external/
 ;
 VariableNameDefault: name=ID_ ('(' dimensions+=DimensionSpec[','] ')')? ('=' value=Expression)?;
-DimensionSpec: (from=Expression? ':' to=Expression?) | to=Expression;
+DimensionSpec: (from=Expression? ':' to=Expression?) | to=Expression | '*';
 FunctionName: OperatorFunction | ID_;
 OperatorFunction: 'operator' '(' operator=CustomOperator ')';
+StatementFunction: FunctionCall '=' Expression EOL;
+FunctionHeader:
+    (Type | /recursive|elemental|pure/)* type=UnitType name=ID_ ('(' parameters*=ID_[','] ')')?
+    ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')? EOL
+    imports=UseStatement*
+    ('implicit' ('none' | Type '(' /[a-z]-[a-z]/+[','] ')') EOL)?
+    declarations=DeclarationStatement*
+    'end' (UnitType ID_?)? EOL
+;
 
 ExecutableStatement:
     CallStatement | IfBlock | IfStatement | SelectBlock |
-    DoBlock | ForallBlock | ForallStatement |
+    DoBlock | DoStatement | ForallBlock | ForallStatement |
     WhereBlock | WhereStatement |
     AssociateStatement |
     AllocateStatement | DeallocateStatement |
     NullifyStatement |
-    OpenStatement | WriteStatement | ReadStatement | CloseStatement |
-    InquireStatement | PrintStatement |
+    OpenStatement | WriteStatement | ReadStatement | CloseStatement | Backspace |
+    InquireStatement | PrintStatement | FormatStatement |
     PointerAssignment | Assignment |
-    ('stop' INT? | 'exit' ID_? | INT? 'continue' | 'go' 'to' INT | /cycle|return/) EOL
+    ('stop' (STRING | INT)? | 'exit' ID_? | INT? 'continue' | 'go' 'to' INT | 'cycle' ID_? | 'return') EOL
 ;
 CallStatement: 'call' subroutine=ID_ ('(' parameters*=Parameter[','] ')')? EOL;
 IfBlock :
-    'if' branches=Branch
+    (ID_ ':' | INT)? 'if' branches=Branch
     ('else' 'if' branches=Branch)*
     ('else' branches=Branch)?
-    'end' 'if' EOL
+    'end' 'if' ID_? EOL
 ;
-IfStatement: 'if' '(' condition=Expression ')' body=ExecutableStatement;
+IfStatement: INT? 'if' '(' condition=Expression ')' body=ExecutableStatement;
 SelectBlock:
     'select' 'case' '(' condition=Expression ')' EOL
     branches*=Case
     'end' 'select' EOL
 ;
-DoBlock :
-    (ID_ ':')? 'do' ('while' '(' condition=Expression ')' | ID_ '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
+DoBlock:
+    (ID_ ':')? 'do ' ('while' '(' condition=Expression ')' | INT? ID_ '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
+    // TODO: remove space in 'do ', check on cg_scalapack.f90
     body=ExecutableStatement*
     'end' 'do' ID_? EOL
 ;
+DoStatement: 'do' INT ','? ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? EOL;
 ForallBlock: 'forall' '(' iters+=IterSpec[','] ')' EOL body*=ExecutableStatement 'end' 'forall' EOL;
 ForallStatement: 'forall' '(' iters+=IterSpec[','] ')' body=ExecutableStatement;
 WhereBlock: 'where' '(' Expression ')' EOL body*=ExecutableStatement 'end' 'where' EOL;
@@ -89,26 +114,32 @@ AllocateStatement: 'allocate' '(' variables+=Parameter[','] ')' EOL;
 DeallocateStatement: 'deallocate' '(' parameters+=Parameter[','] ')' EOL;
 NullifyStatement: 'nullify' '(' names+=LHS[','] ')' EOL;
 OpenStatement: 'open' '(' parameters*=Parameter[','] ')' EOL;
-WriteStatement: 'write' '(' parameters*=Parameter[','] ')' args*=WriteSource[','] EOL;
+WriteStatement: 'write' '(' parameters*=Parameter[','] ')' args*=ExpressionOrIterator[','] EOL;
 PrintStatement: 'print' Parameter (',' args*=Expression[','])? EOL;
-ReadStatement: 'read' '(' parameters*=Parameter[','] ')' vars+=ReadTarget[','] EOL;
+FormatStatement: INT 'format' '(' args+=FormatExpression[','] ')' EOL;
+ReadStatement: 'read' '(' parameters*=Parameter[','] ')' vars*=ReadTarget[','] EOL;
 CloseStatement: 'close' '(' parameters*=Parameter[','] ')' EOL;
-InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')' EOL;
+Backspace: 'backspace' '(' Expression ')' EOL;
+InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')' ID_? EOL;
 PointerAssignment: pointer=LHS '=>' target=LHS EOL;
-Assignment: target=LHS '=' value=Expression EOL;
+Assignment: INT? target=LHS '=' value=Expression EOL;
 
 Parameter: (name=ID_ '=')? value=Expression | value='*';
 Branch: ('(' condition=Expression ')' 'then')? EOL body=ExecutableStatement*;
 Case: 'case' ('(' case+=CaseValue[','] ')' | 'default') EOL body=ExecutableStatement*;
-CaseValue: INT | STRING | LHS;
+CaseValue: CaseSlice | INT | STRING | LHS;
+CaseSlice: INT? ':' INT? | STRING? ':' STRING?;
 IterSpec: itervar=ID_ '=' slice=Slice;
 ReadTarget: LHS | Iterator;
-WriteSource: Expression | Iterator;
+ExpressionOrIterator: Expression | Iterator;
+FormatExpression: INT '(' FormatTerm+[','] ')' | FormatTerm;
+FormatTerm: STRING_ | FormatSpecifier;
+FormatSpecifier: /[.\w]+/;
 
 Expression: operands=Term (operators=Operator operands=Term)* !'=';
 Term:
     FunctionCall | LHS | Array | (INT &CustomOperator) | FLOAT_ | INT |
-    STRING | BOOL_ | UnaryTerm | Complex | Parenthesised
+    STRING_ | BOOL_ | UnaryTerm | Complex | Parenthesised
 ;
 FunctionCall: function=ID_ '(' parameters*=Parameter[','] ')' !'%';
 LHS: components=ArrayCall ('%' components=ArrayCall)*;
@@ -116,17 +147,19 @@ ArrayCall: variable=ID_ ('(' parameters*=Slice[','] ')')?;
 Slice: (from=Expression? ':' to=Expression? (':' by=Expression)?) | to=Expression;
 Array: '(/' members*=ArrayMember[','] '/)' | '[' members*=ArrayMember[','] ']';
 ArrayMember: Iterator | Expression;
-Iterator: '(' values+=Expression[','] ',' var=ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? ')';
+Iterator: '(' values+=ExpressionOrIterator[','] ',' var=ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? ')';
 UnaryTerm: operator=Unary operand=Term;
-Unary: /\.not\.|-/;
+Unary: /\.not\.|-|\+/;
 Parenthesised: '(' inner=Expression ')';
 CustomOperator: /\.[a-z]+\./;
 Operator: CustomOperator | /\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
 
 ID_: /[^_\d\W]\w*\b/;
 BOOL_: /\.true\.|\.false\./;
-FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
+FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de][-+]?\d+)?(_[a-z]+)?/;
 Complex: '(' FLOAT_ ',' FLOAT_ ')';
+STRING_: MultilineString | STRING;
+MultilineString: parts=STRING (/& *\n[ \t]*&/ parts=STRING)+;
 
-Comment: /!.*$|& *(!.*)?(\n *!.*$)*\n *&?/;
+Comment: /!.*$|& *(!.*)?(\n[\t ]*(!.*)?$)*\n[\t ]*(?![\t ]|&["'])&?/;
 EOL: (/[\n;]\s*/)*;
