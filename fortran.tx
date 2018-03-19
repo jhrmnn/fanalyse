@@ -49,6 +49,7 @@ ExecutableStatement:
     WhereBlock | WhereStatement |
     AssociateStatement |
     AllocateStatement | DeallocateStatement |
+    NullifyStatement |
     OpenStatement | WriteStatement | ReadStatement | CloseStatement |
     InquireStatement | PrintStatement |
     PointerAssignment | Assignment |
@@ -84,30 +85,31 @@ AssociateStatement:
 Alias: name=ID_ '=>' Expression;
 AllocateStatement: 'allocate' '(' variables+=Parameter[','] ')' EOL;
 DeallocateStatement: 'deallocate' '(' parameters+=Parameter[','] ')' EOL;
+NullifyStatement: 'nullify' '(' names+=LHS[','] ')' EOL;
 OpenStatement: 'open' '(' parameters*=Parameter[','] ')' EOL;
-WriteStatement: 'write' '(' parameters*=Parameter[','] ')' args*=Expression[','] EOL;
+WriteStatement: 'write' '(' parameters*=Parameter[','] ')' args*=WriteSource[','] EOL;
 PrintStatement: 'print' Parameter (',' args*=Expression[','])? EOL;
 ReadStatement: 'read' '(' parameters*=Parameter[','] ')' vars+=ReadTarget[','] EOL;
 CloseStatement: 'close' '(' parameters*=Parameter[','] ')' EOL;
 InquireStatement: 'inquire' '(' parameters*=Parameter[','] ')' EOL;
 PointerAssignment: pointer=LHS '=>' target=LHS EOL;
 Assignment: target=LHS '=' value=Expression EOL;
-LHS: VariableAccess;
 
 Parameter: (name=ID_ '=')? value=Expression | value='*';
 Branch: ('(' condition=Expression ')' 'then')? EOL body=ExecutableStatement*;
 Case: 'case' ('(' case+=CaseValue[','] ')' | 'default') EOL body=ExecutableStatement*;
-CaseValue: INT | STRING | VariableAccess;
+CaseValue: INT | STRING | LHS;
 IterSpec: itervar=ID_ '=' slice=Slice;
 ReadTarget: LHS | Iterator;
+WriteSource: Expression | Iterator;
 
 Expression: operands=Term (operators=Operator operands=Term)*;
 Term:
-    FunctionCall | VariableAccess | Array | (INT &CustomOperator) | FLOAT_ | INT |
+    FunctionCall | LHS | Array | (INT &CustomOperator) | FLOAT_ | INT |
     STRING | BOOL_ | UnaryTerm | Complex | Parenthesised
 ;
-FunctionCall: function=ID_ '(' parameters*=Parameter[','] ')';
-VariableAccess: components=ArrayCall ('%' components=ArrayCall)*;
+FunctionCall: function=ID_ '(' parameters*=Parameter[','] ')' !'%';
+LHS: components=ArrayCall ('%' components=ArrayCall)*;
 ArrayCall: variable=ID_ ('(' parameters*=Slice[','] ')')?;
 Slice: (from=Expression? ':' to=Expression? (':' by=Expression)?) | to=Expression;
 Array: '(/' members*=ArrayMember[','] '/)' | '[' members*=ArrayMember[','] ']';
@@ -124,5 +126,5 @@ BOOL_: /\.true\.|\.false\./;
 FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de]-?\d+)?(_[a-z]+)?/;
 Complex: '(' FLOAT_ ',' FLOAT_ ')';
 
-Comment: /!.*$|& *(!.*)?\n *&?/;
+Comment: /!.*$|& *(!.*)?(\n *!.*$)*\n *&?/;
 EOL: (/[\n;]\s*/)*;
