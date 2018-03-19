@@ -19,6 +19,7 @@ UseStatement: 'use' module=ID_ (',' 'only' ':' names+=FunctionName[','])? EOL;
 
 DeclarationStatement:
     ScopeDeclaration | InterfaceDeclaration | CustomTypeDeclaration |
+    ExternalDeclaration |
     VariableDeclaration
 ;
 ScopeDeclaration: scope='private' EOL | scope='public' '::' names+=FunctionName[','] EOL;
@@ -32,6 +33,7 @@ CustomTypeDeclaration:
     attributes*=VariableDeclaration
     'end' 'type' ID_? EOL
 ;
+ExternalDeclaration: 'external' '::' names+=ID_[','] EOL;
 VariableDeclaration: type=Type (',' modifiers+=TypeModifier[','])? '::'? variables+=VariableNameDefault[','] EOL;
 TypeModifier:
     'intent' '(' /inout|in|out/ ')' |
