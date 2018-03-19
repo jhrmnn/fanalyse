@@ -105,7 +105,7 @@ IterSpec: itervar=ID_ '=' slice=Slice;
 ReadTarget: LHS | Iterator;
 WriteSource: Expression | Iterator;
 
-Expression: operands=Term (operators=Operator operands=Term)*;
+Expression: operands=Term (operators=Operator operands=Term)* !'=';
 Term:
     FunctionCall | LHS | Array | (INT &CustomOperator) | FLOAT_ | INT |
     STRING | BOOL_ | UnaryTerm | Complex | Parenthesised
@@ -116,7 +116,7 @@ ArrayCall: variable=ID_ ('(' parameters*=Slice[','] ')')?;
 Slice: (from=Expression? ':' to=Expression? (':' by=Expression)?) | to=Expression;
 Array: '(/' members*=ArrayMember[','] '/)' | '[' members*=ArrayMember[','] ']';
 ArrayMember: Iterator | Expression;
-Iterator: '(' value=Expression ',' var=ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? ')';
+Iterator: '(' values+=Expression[','] ',' var=ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? ')';
 UnaryTerm: operator=Unary operand=Term;
 Unary: /\.not\.|-/;
 Parenthesised: '(' inner=Expression ')';
