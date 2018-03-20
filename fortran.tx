@@ -197,7 +197,6 @@ ExpressionOrIterator: Expression | Iterator;
 FormatExpression: FormatTerm? '/' FormatTerm? | INT? FormatTerm;
 FormatTerm: STRING_ | FormatSpecifier | '(' FormatTerm+[','] ')';
 FormatSpecifier: /[.\w]+/;
-ExpressionOrStar: Expression | '*';
 
 Expression: operands=Term (operators=Operator operands=Term)* !'=';
 Term:
@@ -206,11 +205,10 @@ Term:
 ;
 LHS: components=Call ('%' components=Call)*;
 Call: variable=ID_ ('(' arguments*=Argument[','] ')')? ('(' slice=Argument ')')?;
-Argument:
-    from=Expression? ':' to=Expression? (':' by=Expression)? |
-    to=Expression |
-    (keyword=ID_ '=')? to=ExpressionOrStar
-;
+Argument: Slice | ExpressionOrStar | KeywordValue;
+ExpressionOrStar: Expression | '*';
+Slice: from=Expression? ':' to=Expression? (':' by=Expression)?;
+KeywordValue: keyword=ID_ '=' value=ExpressionOrStar;
 Array:
     '(/' elements*=ArrayMember[','] '/)' |
     '[' (Type '::')? elements*=ArrayMember[','] ']'
