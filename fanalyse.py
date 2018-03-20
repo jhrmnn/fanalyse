@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import os
+import sys
 from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
@@ -10,7 +11,7 @@ from multiprocessing import Pool
 from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
 
-from typing import Any, Dict, TypeVar, List
+from typing import Any, Dict, TypeVar, List, Tuple
 
 _T = TypeVar('_T')
 
@@ -44,25 +45,44 @@ def _model_to_dict(o: Any) -> Any:
     return o
 
 
-def parse_source(filename: str) -> Any:
+def pprint(s: Any) -> None:
+    sys.stdout.write('\x1b[2K\r{0}\n'.format(s))
+
+
+def parse_source(filename: str) -> Tuple[str, Any]:
     source = Path(filename).read_text()
     try:
         model = _fortran_mm.model_from_str(source)
     except TextXSyntaxError as e:
-        print(f'Warning: {filename} was not parsed.')
-        print(f'  {e.args[0]}')
-        return
+        pprint(f'Warning: {filename} was not parsed.')
+        pprint(f'  {e.args[0]}')
+        return filename, None
     model_dict = _model_to_dict(model)
-    print(f'Parsed {filename}.')
-    return model_dict
+    return filename, model_dict
 
 
 def parse(filenames: List[str], main: str = None, jobs: int = None) -> None:
     if len(filenames) == 1:
         parse_source(filenames[0])
-    else:
-        with Pool(jobs) as pool:
-            pool.map(parse_source, filenames)
+        return
+
+    n_all = len(filenames)
+    parsed = {}
+
+    def update(result: Tuple[str, Any]) -> None:
+        inp, out = result
+        parsed[inp] = out
+        n_done = len(parsed)
+        sys.stdout.write(
+            f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
+        )
+        sys.stdout.flush()
+
+    pool = Pool(jobs)
+    for filename in filenames:
+        pool.apply_async(parse_source, (filename,), callback=update)
+    pool.close()
+    pool.join()
 
 
 def parse_cli() -> Dict[str, Any]:
