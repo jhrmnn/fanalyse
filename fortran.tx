@@ -5,7 +5,7 @@
 File: ProgramUnit*;
 ProgramUnit:
     EOL?
-    (type=Type | 'recursive' | 'elemental '| 'pure')* unit=UnitType
+    (type=Type? 'recursive'? 'elemental'? 'pure'?)# unit=UnitType
     name=ID_ ('(' arguments*=ID_[','] ')')?
     ('result' '(' result=ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
     EOL
@@ -22,8 +22,8 @@ ImplicitType: type=Type '(' chars+=/[a-z]-[a-z]/[','] ')';
 Type: name=TypeName parameters=TypeParameters?;
 TypeParameters:
     '*' (INT | '(' (len=Expression | '*') ')') |
-    '(' ('kind' '=' kind=Expression | ('len' '=')?
-    (len=Expression | '*' | ':'))+[','] ')'
+    '(' (('kind' '=' kind=Expression)? (('len' '=')?
+    (len=Expression | '*' | ':'))?)#[','] ')'
 ;
 TypeName:
     'double' ('precision' | 'complex') | 'integer' | 'logical' |
@@ -60,7 +60,7 @@ InterfaceBlock:
     'end' 'interface' EOL
 ;
 CustomTypeDeclaration:
-    'type' ((',' scope=Scope | ',' 'bind' '(' 'c' ')')* '::')? name=ID_ EOL
+    'type' (((',' scope=Scope)? (',' 'bind' '(' 'c' ')')?)# '::')? name=ID_ EOL
     attributes*=DeclarationStatement
     ('contains' EOL
     methods*=MethodDeclaration)?
@@ -99,7 +99,7 @@ FunctionName: OperatorFunction | ID_;
 OperatorFunction: 'operator' '(' name=CustomOperator ')';
 MethodDeclaration: 'procedure' ',' 'pass' '::' local=ID_ '=>' foreign=ID_ EOL;
 FunctionHeader:
-    (Type | 'recursive' | 'elemental '| 'pure')* UnitType
+    (Type? 'recursive'? 'elemental'? 'pure'?)# UnitType
     name=ID_ ('(' ID_*[','] ')')?
     ('result' '(' ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
     EOL
@@ -203,7 +203,7 @@ Term:
     LHS | Array | (INT_ &CustomOperator) | FLOAT_ | INT_ |
     STRING_ | BOOL_ | UnaryTerm | Complex | Parenthesised
 ;
-LHS: components=Call ('%' components=Call)*;
+LHS: components+=Call['%'];
 Call: variable=ID_ ('(' arguments*=Argument[','] ')')? ('(' slice=Argument ')')?;
 Argument: Slice | ExpressionOrStar | KeywordValue;
 ExpressionOrStar: Expression | '*';
