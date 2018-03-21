@@ -4,8 +4,8 @@
 
 File: EOL? units=ProgramUnit*;
 ProgramUnit:
-    (type=Type? 'recursive'? 'elemental'? 'pure'?)# unit=UnitType
-    name=ID_ ('(' arguments*=ID_[','] ')')?
+    (type=Type? 'recursive'? 'elemental'? 'pure'?)#
+    unit=UnitType name=ID_ ('(' arguments*=ID_[','] ')')?
     ('result' '(' result=ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
     EOL
     imports=UseStatement*
@@ -21,8 +21,8 @@ ImplicitType: type=TypeName ('*' INT)? '(' chars+=/[a-z](-[a-z])?/[','] ')';
 Type: name=TypeName parameters=TypeParameters?;
 TypeParameters:
     '*' (INT | '(' len=ExpressionOrStar ')') |
-    '(' ((('kind' '=')? kind=Expression)? (('len' '=')?
-    (len=Expression | '*' | ':'))?)#[','] ')'
+    '(' ((('kind' '=')? kind=Expression)?
+    (('len' '=')? (len=Expression | '*' | ':'))?)#[','] ')'
 ;
 TypeName:
     'double' ('precision' | 'complex') | 'integer' | 'logical' |
@@ -67,8 +67,8 @@ CustomTypeDeclaration:
 ;
 ExternalDeclaration: 'external' '::'? names+=ID_[','] EOL;
 SaveDeclaration: 'save' variables*=ID_[','] EOL;
-DimensionStatement: 'dimension' variables+=VariableNameDefault[','] EOL;
-ParameterStatement: 'parameter' '(' variables+=VariableNameDefault[','] ')' EOL;
+DimensionStatement: 'dimension' variables+=VariableDefault[','] EOL;
+ParameterStatement: 'parameter' '(' variables+=VariableDefault[','] ')' EOL;
 IncludeStatement: 'include' file=STRING EOL;
 DataStatement: 'data' data+=DataSpecification[','] EOL;
 DataSpecification: names+=LHS[','] '/' values+=Expression[','] '/';
@@ -78,40 +78,37 @@ CommonBlock: 'common' common=CommonSpecification+[','] EOL;
 CommonSpecification: '/' name=ID_? '/' values=LHS+[','];
 VariableDeclaration:
     type=Type (',' modifiers+=TypeModifier[','])? '::'?
-    variables+=VariableNameDefault[',']
+    variables+=VariableDefault[',']
     EOL
 ;
 TypeModifier:
-    Intent | Dimension |
-    'parameter' | 'allocatable' | 'optional' | 'target' | 'pointer' |
-    'save' | 'value' | 'public' | 'private' | 'external' | 'protected'
+    Intent | Dimension | 'parameter' | 'allocatable' | 'optional' |
+    'target' | 'pointer' | 'save' | 'value' | 'public' | 'private' |
+    'external' | 'protected'
 ;
 Intent: 'intent' '(' intent=IntentSpec ')';
 IntentSpec: /in *out/ | 'in' | 'out';
 Dimension: 'dimension' '(' dimensions+=DimensionSpec[','] ')';
-VariableNameDefault:
+DimensionSpec: (from=Expression? ':' to=Expression?) | to=ExpressionOrStar;
+VariableDefault:
     name=ID_ ('(' dimensions+=DimensionSpec[','] ')' | '*' INT)?
     ('=' value=Expression | '=>' 'null' '(' ')')?
 ;
-DimensionSpec: (from=Expression? ':' to=Expression?) | to=Expression | '*';
 FunctionName: OperatorFunction | ID_;
 OperatorFunction: 'operator' '(' name=CustomOperator ')';
 MethodDeclaration: 'procedure' ',' 'pass' '::' local=ID_ '=>' foreign=ID_ EOL;
 
 ExecutableStatement:
-    CallStatement | IfBlock | IfStatement | SelectBlock |
-    DoBlock | DoStatement | ForallBlock | ForallStatement |
-    WhereBlock | WhereStatement |
-    AssociateStatement |
-    AllocateStatement | DeallocateStatement |
-    NullifyStatement |
-    OpenStatement | WriteStatement | ReadStatement | CloseStatement | Backspace |
-    Rewind | AssignStatement | Pause |
-    InquireStatement | PrintStatement | FormatStatement |
-    PointerAssignment | Assignment |
+    CallStatement | IfBlock | IfStatement | SelectBlock | DoBlock |
+    DoStatement | ForallBlock | ForallStatement | WhereBlock |
+    WhereStatement | AssociateStatement | AllocateStatement |
+    DeallocateStatement | NullifyStatement | OpenStatement |
+    WriteStatement | ReadStatement | CloseStatement | Backspace |
+    Rewind | AssignStatement | Pause | InquireStatement | PrintStatement |
+    FormatStatement | PointerAssignment | Assignment |
     ('stop' (STRING | INT)? | 'exit' ID_? | INT? 'continue' |
-    'go' 'to' ('(' INT+[','] ')' ','?)? Expression |
-    'cycle' ID_? | INT? 'return') EOL
+    'go' 'to' ('(' INT+[','] ')' ','?)? Expression | 'cycle' ID_? |
+    INT? 'return') EOL
 ;
 CallStatement: INT? 'call' call=LHS EOL;
 IfBlock :
