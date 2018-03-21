@@ -42,15 +42,21 @@ def myprint(s: Any) -> None:
     sys.stdout.write('\x1b[2K\r{0}\n'.format(s))
 
 
+class MyKeyboardInterrupt(Exception):
+    pass
+
+
 def parse_source(filename: str) -> Tuple[str, Any]:
     source = Path(filename).read_text()
     try:
         model = _fortran_mm.model_from_str(source + '\n')
+        model_dict = _model_to_dict(model)
+    except KeyboardInterrupt as e:
+        raise MyKeyboardInterrupt from e
     except TextXSyntaxError as e:
         myprint(f'Warning: {filename} was not parsed.')
         myprint(f'  {e.args[0]}')
         return filename, None
-    model_dict = _model_to_dict(model)
     return filename, model_dict
 
 
@@ -91,5 +97,5 @@ def parse_cli() -> Dict[str, Any]:
 if __name__ == '__main__':
     try:
         parse(**parse_cli())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, MyKeyboardInterrupt):
         raise SystemExit(1)
