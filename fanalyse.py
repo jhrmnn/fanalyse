@@ -17,15 +17,8 @@ _T = TypeVar('_T')
 
 DEBUG = os.environ.get('DEBUG')
 
-# _bools = {'.true.': True, '.false.': False}
 _fortran_mm = metamodel_from_file(
     Path(__file__).parent/'fortran.tx',
-    # match_filters={
-    #     'FLOAT_': lambda s: float(s.replace('d', 'e')),
-    #     'LebedevInt': int,
-    #     'BOOL_': lambda s: _bools[s],
-    # },
-    # auto_init_attributes=False
     ignore_case=True,
     ws='\t ',
     memoization=True,
