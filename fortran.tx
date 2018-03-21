@@ -128,9 +128,8 @@ SelectBlock:
     'end' 'select' EOL
 ;
 DoBlock:
-    (ID_ ':')? /do\s/ ('while' '(' condition=Expression ')' |
+    (ID_ ':')? 'do' ('while' '(' condition=Expression ')' |
         INT? ID_ '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
-    // TODO: remove space in 'do ', check on cg_scalapack.f90
     body=ExecutableStatement*
     'end' 'do' ID_? EOL
 ;
@@ -226,4 +225,4 @@ MultiString: parts=STRING parts+=STRING;
 // 2. escaping of a quote in fortran, which is incompatible with python
 
 Comment: /!.*$|^#.*$|& *(!.*)?(\n[\t ]*(!.*)?$)*\n[\t ]*&?/;
-EOL: (/[\n;]\s*/)*;
+EOL: (/[\n;]\s*/)+;

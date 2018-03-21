@@ -31,24 +31,24 @@ def _model_to_dict(o: Any) -> Any:
             k: _model_to_dict(v) for k, v in vars(o).items()
             if k[0] != '_' and k != 'parent'
         }
-        dct['_type'] = type(o).__name__,
+        dct['_type'] = type(o).__name__
         return dct
     if isinstance(o, list):
         return [_model_to_dict(x) for x in o]
     return o
 
 
-def pprint(s: Any) -> None:
+def myprint(s: Any) -> None:
     sys.stdout.write('\x1b[2K\r{0}\n'.format(s))
 
 
 def parse_source(filename: str) -> Tuple[str, Any]:
     source = Path(filename).read_text()
     try:
-        model = _fortran_mm.model_from_str(source)
+        model = _fortran_mm.model_from_str(source + '\n')
     except TextXSyntaxError as e:
-        pprint(f'Warning: {filename} was not parsed.')
-        pprint(f'  {e.args[0]}')
+        myprint(f'Warning: {filename} was not parsed.')
+        myprint(f'  {e.args[0]}')
         return filename, None
     model_dict = _model_to_dict(model)
     return filename, model_dict
