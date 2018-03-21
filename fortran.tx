@@ -21,8 +21,8 @@ ImplicitType: type=Type '(' chars+=/[a-z]-[a-z]/[','] ')';
 
 Type: name=TypeName parameters=TypeParameters?;
 TypeParameters:
-    '*' (INT | '(' (len=Expression | '*') ')') |
-    '(' (('kind' '=' kind=Expression)? (('len' '=')?
+    '*' (INT | '(' len=ExpressionOrStar ')') |
+    '(' ((('kind' '=')? kind=Expression)? (('len' '=')?
     (len=Expression | '*' | ':'))?)#[','] ')'
 ;
 TypeName:
@@ -56,7 +56,7 @@ ModuleInterface:
 ;
 InterfaceBlock:
     'abstract'? 'interface' EOL
-    headers+=FunctionHeader
+    headers+=ProgramUnit
     'end' 'interface' EOL
 ;
 CustomTypeDeclaration:
@@ -98,16 +98,6 @@ DimensionSpec: (from=Expression? ':' to=Expression?) | to=Expression | '*';
 FunctionName: OperatorFunction | ID_;
 OperatorFunction: 'operator' '(' name=CustomOperator ')';
 MethodDeclaration: 'procedure' ',' 'pass' '::' local=ID_ '=>' foreign=ID_ EOL;
-FunctionHeader:
-    (Type? 'recursive'? 'elemental'? 'pure'?)# UnitType
-    name=ID_ ('(' ID_*[','] ')')?
-    ('result' '(' ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
-    EOL
-    UseStatement*
-    ('implicit' ('none' | Type '(' /[a-z]-[a-z]/+[','] ')') EOL)?
-    DeclarationStatement*
-    'end' (UnitType ID_?)? EOL
-;
 
 ExecutableStatement:
     CallStatement | IfBlock | IfStatement | SelectBlock |
