@@ -164,7 +164,7 @@ WriteStatement:
     ','? args*=ExpressionOrIterator[','] EOL
 ;
 PrintStatement: 'print' format=Argument (',' args*=ExpressionOrIterator[','])? EOL;
-FormatStatement: INT 'format' '(' args+=FormatExpression[','] ')' EOL;
+FormatStatement: INT 'format' '(' FormatList ')' EOL;
 ReadStatement: 'read' '(' parameters*=Argument[','] ')' ','? args*=ReadTarget[','] EOL;
 CloseStatement: 'close' '(' parameters*=Argument[','] ')' EOL;
 Backspace: 'backspace' '(' unit=Expression ')' EOL;
@@ -184,10 +184,10 @@ CaseSlice: from=Expression? ':' to=Expression?;
 IterSpec: variable=ID_ '=' slice=Argument;
 ReadTarget: LHS | Iterator;
 ExpressionOrIterator: Expression | Iterator;
-FormatExpression: FormatTerm? '/' FormatTerm? | INT? FormatTerm;
-// TODO: do FormatExpression properly
-FormatTerm: STRING_ | FormatSpecifier | '(' FormatTerm+[','] ')';
-FormatSpecifier: /[.\w]+/;
+FormatList: (element=FormatExpression | ',')+;
+FormatExpression: repeat=INT? desc=EditDescriptor;
+EditDescriptor: STRING_ | NumberEditDescriptor | '/' | '(' FormatList ')';
+NumberEditDescriptor: /[a-z0-9.]*/;
 
 Expression: operands=Term (operators=Operator operands=Term)* !'=';
 Term:
