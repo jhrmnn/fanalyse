@@ -2,9 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-File: ProgramUnit*;
+File: EOL? units=ProgramUnit*;
 ProgramUnit:
-    EOL?
     (type=Type? 'recursive'? 'elemental'? 'pure'?)# unit=UnitType
     name=ID_ ('(' arguments*=ID_[','] ')')?
     ('result' '(' result=ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
