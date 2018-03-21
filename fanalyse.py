@@ -3,11 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import os
-import sys
 from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
-from functools import partial
 
 from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
@@ -40,7 +38,7 @@ def _model_to_dict(o: Any) -> Any:
 
 
 def myprint(s: Any) -> None:
-    sys.stdout.write('\x1b[2K\r{0}\n'.format(s))
+    print(f'\x1b[2K\r{s}')
 
 
 # rethrow KeyboardInterrupt from multiprocessing
@@ -63,25 +61,30 @@ def parse_source(filename: str) -> Tuple[str, Any]:
     return filename, model_dict
 
 
-def update_parsed(result: Tuple[str, Any], parsed: Dict[str, Any], n_all: int
-                  ) -> None:
-    inp, out = result
-    parsed[inp] = out
-    n_done = len(parsed)
-    msg = f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
-    sys.stdout.write(msg)
-    sys.stdout.flush()
+class Collector:
+    def __init__(self, n_all: int) -> None:
+        self._n_all = n_all
+        self._parsed: Dict[str, Any] = {}
+
+    def __str__(self) -> str:
+        n_done = len(self._parsed)
+        n_all = self._n_all
+        return f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
+
+    def update(self, result: Tuple[str, Any]) -> None:
+        inp, out = result
+        self._parsed[inp] = out
+        print(self, end='', flush=True)
 
 
 def parse(filenames: List[str], main: str = None, jobs: int = None) -> None:
     if len(filenames) == 1:
         parse_source(filenames[0])
         return
-    parsed: Dict[str, Any] = {}
-    update = partial(update_parsed, parsed=parsed, n_all=len(filenames))
+    parsed = Collector(len(filenames))
     pool = Pool(jobs)
     for filename in filenames:
-        pool.apply_async(parse_source, (filename,), callback=update)
+        pool.apply_async(parse_source, (filename,), callback=parsed.update)
     pool.close()
     pool.join()
 
