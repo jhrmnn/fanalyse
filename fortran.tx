@@ -226,5 +226,5 @@ MultiString: parts=STRING parts+=STRING;
 // 1. multline strings, which cannot be distinguished from linebreaks
 // 2. escaping of a quote in fortran, which is incompatible with python
 
-Comment: /!.*$|^#.*$|& *(!.*)?(\n[\t ]*(!.*)?$)*\n[\t ]*&?|^[c*].*$|\n(^c.*\n)*     [+1-9&$I|#*>]/;
+Comment: /!.*$|^#.*$|& *(!.*)?(\n[\t ]*(!.*)?$)*\n[\t ]*&?/;
 EOL: (/[\n;]/)+;
