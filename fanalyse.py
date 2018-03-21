@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
+from functools import partial
 
 from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
@@ -42,13 +43,15 @@ def myprint(s: Any) -> None:
     sys.stdout.write('\x1b[2K\r{0}\n'.format(s))
 
 
+# rethrow KeyboardInterrupt from multiprocessing
+# https://stackoverflow.com/questions/1408356/keyboard-interrupts-with-pythons-multiprocessing-pool
 class MyKeyboardInterrupt(Exception):
     pass
 
 
 def parse_source(filename: str) -> Tuple[str, Any]:
-    source = Path(filename).read_text()
     try:
+        source = Path(filename).read_text()
         model = _fortran_mm.model_from_str(source + '\n')
         model_dict = _model_to_dict(model)
     except KeyboardInterrupt as e:
@@ -60,23 +63,22 @@ def parse_source(filename: str) -> Tuple[str, Any]:
     return filename, model_dict
 
 
+def update_parsed(result: Tuple[str, Any], parsed: Dict[str, Any], n_all: int
+                  ) -> None:
+    inp, out = result
+    parsed[inp] = out
+    n_done = len(parsed)
+    msg = f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+
 def parse(filenames: List[str], main: str = None, jobs: int = None) -> None:
     if len(filenames) == 1:
         parse_source(filenames[0])
         return
-
-    n_all = len(filenames)
-    parsed = {}
-
-    def update(result: Tuple[str, Any]) -> None:
-        inp, out = result
-        parsed[inp] = out
-        n_done = len(parsed)
-        sys.stdout.write(
-            f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
-        )
-        sys.stdout.flush()
-
+    parsed: Dict[str, Any] = {}
+    update = partial(update_parsed, parsed=parsed, n_all=len(filenames))
     pool = Pool(jobs)
     for filename in filenames:
         pool.apply_async(parse_source, (filename,), callback=update)
@@ -85,7 +87,6 @@ def parse(filenames: List[str], main: str = None, jobs: int = None) -> None:
 
 
 def parse_cli() -> Dict[str, Any]:
-    """Handle the command-line interface."""
     parser = ArgumentParser()
     arg = parser.add_argument
     arg('filenames', metavar='FILE', nargs='+')
