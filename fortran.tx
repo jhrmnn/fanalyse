@@ -225,4 +225,4 @@ MultiString: parts=STRING parts+=STRING;
 // 2. escaping of a quote in fortran, which is incompatible with python
 
 Comment: /!.*$|^#.*$|& *(!.*)?(\n[\t ]*(!.*)?$)*\n[\t ]*&?/;
-EOL: (/[\n;]\s*/)+;
+EOL: (/[\n;]/)+;
