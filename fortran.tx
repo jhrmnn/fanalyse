@@ -215,7 +215,7 @@ Operator: CustomOperator | /\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
 ID_: /[^_\d\W]\w*\b/;
 BOOL_: /\.true\.|\.false\./;
 FLOAT_: /-?(\d*\.\d+|\d+\.\d*|\d+)([de][-+]?\d+)?(_[0-9a-z_]+)?/;
-INT_: INT | /-?\d+(_[0-9a-z_]+)?/;
+INT_: /-?\d+(_[0-9a-z_]+)?/;
 Complex: '(' FLOAT_ ',' FLOAT_ ')';
 STRING_: MultiString | STRING;
 MultiString: parts=STRING parts+=STRING;
