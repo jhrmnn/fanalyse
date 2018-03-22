@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -6,6 +5,7 @@ import os
 from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
+import pkg_resources
 
 from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
@@ -17,7 +17,7 @@ _T = TypeVar('_T')
 DEBUG = os.environ.get('DEBUG')
 
 fortran_mm = metamodel_from_file(
-    Path(__file__).parent/'fortran.tx',
+    pkg_resources.resource_filename(__name__, 'fortran.tx'),
     ignore_case=True,
     ws='\t ',
     memoization=True,
@@ -127,7 +127,7 @@ def parse_cli() -> Dict[str, Any]:
     return vars(parser.parse_args())
 
 
-if __name__ == '__main__':
+def main() -> None:
     try:
         parse(**parse_cli())
     except (KeyboardInterrupt, MyKeyboardInterrupt):
