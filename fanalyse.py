@@ -24,6 +24,36 @@ fortran_mm = metamodel_from_file(
 )
 
 
+class GraphWithCycles(Exception):
+    pass
+
+
+def topsorted(tree: Dict[_T, List[_T]]) -> List[_T]:
+    idxs = {node: i for i, node in enumerate(tree)}
+    outgoing = [
+        [idxs[child] for child in children]
+        for node, children in tree.items()
+    ]
+    N = len(tree)
+    n_incoming = N*[0]
+    for edges in outgoing:
+        for i in edges:
+            n_incoming[i] += 1
+    L = []
+    S = [i for i in range(N) if n_incoming[i] == 0]
+    while S:
+        i = S.pop()
+        L.append(i)
+        for j in outgoing[i]:
+            n_incoming[j] -= 1
+            if not n_incoming[j]:
+                S.append(j)
+    if sum(n_incoming):
+        raise GraphWithCycles()
+    iidxs = {i: node for node, i in idxs.items()}
+    return [iidxs[i] for i in L]
+
+
 def model_to_dict(o: Any) -> Any:
     if hasattr(o, '_tx_metamodel'):
         dct = {
