@@ -34,8 +34,7 @@ UnitType: 'program' | 'subroutine' | 'module' | 'function';
 
 UseStatement:
     'use' (',' 'intrinsic' '::')? module=ID_
-    (',' rename+=Rename[','])?
-    (',' 'only' ':' only+=Rename[','])?
+    (',' rename+=Rename[','] | ',' 'only' ':' only+=Rename[','])?
     EOL
 ;
 Rename: !'only' local=FunctionName ('=>' foreign=FunctionName)?;
