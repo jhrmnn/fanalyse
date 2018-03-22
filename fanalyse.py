@@ -10,7 +10,7 @@ from multiprocessing import Pool
 from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
 
-from typing import Any, Dict, TypeVar, List, Tuple
+from typing import Any, Dict, TypeVar, List
 
 _T = TypeVar('_T')
 
@@ -47,33 +47,32 @@ class MyKeyboardInterrupt(Exception):
     pass
 
 
-def parse_source(filename: str) -> Tuple[str, Any]:
+def parse_source(filename: str) -> Any:
     try:
         source = Path(filename).read_text()
-        model = _fortran_mm.model_from_str(source + '\n')
-        model_dict = _model_to_dict(model)
+        model = fortran_mm.model_from_str(source + '\n')
+        model_dict = model_to_dict(model)
     except KeyboardInterrupt as e:
         raise MyKeyboardInterrupt from e
     except TextXSyntaxError as e:
         myprint(f'Warning: {filename} was not parsed.')
         myprint(f'  {e.args[0]}')
-        return filename, None
-    return filename, model_dict
+        return None
+    return model_dict
 
 
 class Collector:
     def __init__(self, n_all: int) -> None:
         self._n_all = n_all
-        self._parsed: Dict[str, Any] = {}
+        self._parsed: List[Any] = []
 
     def __str__(self) -> str:
         n_done = len(self._parsed)
         n_all = self._n_all
         return f' Progress: {n_done}/{n_all} files ({100*n_done/n_all:.1f}%)\r'
 
-    def update(self, result: Tuple[str, Any]) -> None:
-        inp, out = result
-        self._parsed[inp] = out
+    def update(self, result: Any) -> None:
+        self._parsed.append(result)
         print(self, end='', flush=True)
 
 
