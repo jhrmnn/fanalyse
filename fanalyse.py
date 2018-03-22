@@ -16,7 +16,7 @@ _T = TypeVar('_T')
 
 DEBUG = os.environ.get('DEBUG')
 
-_fortran_mm = metamodel_from_file(
+fortran_mm = metamodel_from_file(
     Path(__file__).parent/'fortran.tx',
     ignore_case=True,
     ws='\t ',
@@ -24,16 +24,16 @@ _fortran_mm = metamodel_from_file(
 )
 
 
-def _model_to_dict(o: Any) -> Any:
+def model_to_dict(o: Any) -> Any:
     if hasattr(o, '_tx_metamodel'):
         dct = {
-            k: _model_to_dict(v) for k, v in vars(o).items()
+            k: model_to_dict(v) for k, v in vars(o).items()
             if k[0] != '_' and k != 'parent'
         }
         dct['_type'] = type(o).__name__
         return dct
     if isinstance(o, list):
-        return [_model_to_dict(x) for x in o]
+        return [model_to_dict(x) for x in o]
     return o
 
 
