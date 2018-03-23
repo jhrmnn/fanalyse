@@ -5,23 +5,15 @@ import os
 from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
-import pkg_resources
+from typing import Any, Dict, TypeVar, List
 
-from textx.metamodel import metamodel_from_file  # type: ignore
 from textx.exceptions import TextXSyntaxError  # type: ignore
 
-from typing import Any, Dict, TypeVar, List
+from .fortran import fortran_mm, model_to_dict
 
 _T = TypeVar('_T')
 
 DEBUG = os.environ.get('DEBUG')
-
-fortran_mm = metamodel_from_file(
-    pkg_resources.resource_filename(__name__, 'fortran.tx'),
-    ignore_case=True,
-    ws='\t ',
-    memoization=True,
-)
 
 
 class GraphWithCycles(Exception):
@@ -52,19 +44,6 @@ def topsorted(tree: Dict[_T, List[_T]]) -> List[_T]:
         raise GraphWithCycles()
     iidxs = {i: node for node, i in idxs.items()}
     return [iidxs[i] for i in L]
-
-
-def model_to_dict(o: Any) -> Any:
-    if hasattr(o, '_tx_metamodel'):
-        dct = {
-            k: model_to_dict(v) for k, v in vars(o).items()
-            if k[0] != '_' and k != 'parent'
-        }
-        dct['_type'] = type(o).__name__
-        return dct
-    if isinstance(o, list):
-        return [model_to_dict(x) for x in o]
-    return o
 
 
 def myprint(s: Any) -> None:
