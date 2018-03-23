@@ -88,7 +88,7 @@ TypeModifier:
 Intent: 'intent' '(' intent=IntentSpec ')';
 IntentSpec: /in *out/ | 'in' | 'out';
 Dimension: 'dimension' '(' dimensions+=DimensionSpec[','] ')';
-DimensionSpec: (from=Expression? ':' to=Expression?) | to=ExpressionOrStar;
+DimensionSpec: (from_=Expression? ':' to=Expression?) | to=ExpressionOrStar;
 VariableDefault:
     name=ID_ ('(' dimensions+=DimensionSpec[','] ')' | '*' INT)?
     ('=' value=Expression | '=>' 'null' '(' ')')?
@@ -104,10 +104,7 @@ ExecutableStatement:
     DeallocateStatement | NullifyStatement | OpenStatement |
     WriteStatement | ReadStatement | CloseStatement | Backspace |
     Rewind | AssignStatement | Pause | InquireStatement | PrintStatement |
-    FormatStatement | PointerAssignment | Assignment |
-    ('stop' (STRING | INT)? | 'exit' ID_? | INT? 'continue' |
-    'go' 'to' ('(' INT+[','] ')' ','?)? Expression | 'cycle' ID_? |
-    INT? 'return') EOL
+    FormatStatement | PointerAssignment | Assignment | ControlStatement
 ;
 CallStatement: INT? 'call' call=LHS EOL;
 IfBlock :
@@ -124,12 +121,12 @@ SelectBlock:
 ;
 DoBlock:
     (ID_ ':')? 'do' ('while' '(' condition=Expression ')' |
-        INT? ID_ '=' from=Expression ',' to=Expression (',' by=Expression)?)? EOL
+        INT? ID_ '=' from_=Expression ',' to=Expression (',' by=Expression)?)? EOL
     body=ExecutableStatement*
     'end' 'do' ID_? EOL
 ;
 DoStatement:
-    'do' INT ','? ID_ '=' from=Expression ',' to=Expression (',' by=Expression)?
+    'do' INT ','? ID_ '=' from_=Expression ',' to=Expression (',' by=Expression)?
     EOL
 ;
 ForallBlock:
@@ -150,7 +147,6 @@ AssociateStatement:
     body*=ExecutableStatement
     'end' 'associate' EOL
 ;
-Alias: name=ID_ '=>' target=Expression;
 AllocateStatement: 'allocate' '(' (Type '::')? variables+=Argument[','] ')' EOL;
 DeallocateStatement: 'deallocate' '(' variables+=Argument[','] ')' EOL;
 NullifyStatement: 'nullify' '(' variables+=LHS[','] ')' EOL;
@@ -171,12 +167,18 @@ Equivalence: 'equivalence' '(' LHS+[','] ')' EOL;
 InquireStatement: 'inquire' '(' parameters*=Argument[','] ')' variable=ID_? EOL;
 PointerAssignment: pointer=LHS '=>' target=LHS EOL;
 Assignment: INT? target=LHS '=' value=Expression EOL;
+ControlStatement: (
+    cmd='stop' (STRING | INT)? | cmd='exit' ID_? | INT? cmd='continue' |
+    cmd='go' 'to' ('(' INT+[','] ')' ','?)? Expression | cmd='cycle' ID_? |
+    INT? cmd='return'
+) EOL;
 
+Alias: name=ID_ '=>' target=Expression;
 Branch: '(' condition=Expression ')' 'then' EOL body=ExecutableStatement*;
 DefaultBranch: EOL body=ExecutableStatement*;
 Case: 'case' ('(' case+=CaseValue[','] ')' | 'default') EOL body=ExecutableStatement*;
 CaseValue: CaseSlice | Expression;
-CaseSlice: from=Expression? ':' to=Expression?;
+CaseSlice: from_=Expression? ':' to=Expression?;
 IterSpec: variable=ID_ '=' slice=Argument;
 ReadTarget: LHS | Iterator;
 ExpressionOrIterator: Expression | Iterator;
@@ -187,14 +189,13 @@ NumberEditDescriptor: /[a-z0-9.]*/;
 
 Expression: operands=Term (operators=Operator operands=Term)* !'=';
 Term:
-    LHS | Array | UnaryTerm | (INT_ &CustomOperator) | FLOAT_ | INT_ |
-    STRING_ | BOOL_ | Complex | Parenthesised
+    LHS | Array | UnaryTerm | Constant | Parenthesised
 ;
 LHS: components+=Call['%'];
 Call: variable=ID_ ('(' arguments*=Argument[','] ')')? ('(' slice=Argument ')')?;
 Argument: Slice | ExpressionOrStar | KeywordValue;
 ExpressionOrStar: Expression | '*';
-Slice: from=Expression? ':' to=Expression? (':' by=Expression)?;
+Slice: from_=Expression? ':' to=Expression? (':' by=Expression)?;
 KeywordValue: keyword=ID_ '=' value=ExpressionOrStar;
 Array:
     '(/' elements*=ArrayMember[','] '/)' |
@@ -203,10 +204,14 @@ Array:
 ArrayMember: Iterator | Expression;
 Iterator:
     '(' values+=ExpressionOrIterator[','] ','
-    varable=ID_ '=' from=Expression ',' to=Expression (',' by=Expression)? ')'
+    varable=ID_ '=' from_=Expression ',' to=Expression (',' by=Expression)? ')'
 ;
 UnaryTerm: operator=Unary operand=Term;
 Unary: /\.not\.|-|\+/;
+Constant:
+    (val=INT_ &CustomOperator) | val=FLOAT_ | val=INT_ | val=STRING_ |
+    val=BOOL_ | val=Complex
+;
 Parenthesised: '(' expression=Expression ')';
 CustomOperator: /\.[a-z]+\./;
 Operator: CustomOperator | /\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
