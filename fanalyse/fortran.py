@@ -2,9 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import pkg_resources
-from typing import Any
 
-from textx.metamodel import metamodel_from_file  # type: ignore
+from textx.metamodel import metamodel_from_file
 
 
 fortran_mm = metamodel_from_file(
@@ -15,7 +14,7 @@ fortran_mm = metamodel_from_file(
 )
 
 
-def model_to_dict(o: Any) -> Any:
+def model_to_dict(o):
     if hasattr(o, '_tx_metamodel'):
         dct = {
             k: model_to_dict(v) for k, v in vars(o).items()
