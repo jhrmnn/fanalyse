@@ -6,7 +6,7 @@ File: EOL? units=ProgramUnit*;
 ProgramUnit:
     (type=Type? 'recursive'? 'elemental'? 'pure'?)#
     unit=UnitType name=ID_ ('(' arguments*=ID_[','] ')')?
-    ('result' '(' result=ID_ ')')? ('bind' '(' 'c' (',' 'name' '=' STRING )? ')')?
+    ('result' '(' result=ID_ ')')? BindC?
     EOL
     imports=UseStatement*
     ('implicit' (implicit='none' | implicit+=ImplicitType[',']) EOL)?
@@ -26,9 +26,9 @@ TypeParameters:
 ;
 TypeName:
     'double' ('precision' | 'complex') | 'integer' | 'logical' |
-    'character' | 'real' | 'complex' | CustomTypeName | ProcedureTypeName
+    'character' | 'real' | 'complex' | DerivedTypeName | ProcedureTypeName
 ;
-CustomTypeName: ('type' | 'class') '(' name=ID_ ')';
+DerivedTypeName: ('type' | 'class') '(' name=ID_ ')';
 ProcedureTypeName: 'procedure' '(' name=ID_ ')';
 UnitType: 'program' | 'subroutine' | 'module' | 'function';
 
@@ -40,7 +40,7 @@ UseStatement:
 Rename: !'only' local=FunctionName ('=>' foreign=FunctionName)?;
 
 DeclarationStatement:
-    ScopeDeclaration | ModuleInterface | InterfaceBlock | CustomTypeDeclaration |
+    ScopeDeclaration | ModuleInterface | InterfaceBlock | DerivedTypeDeclaration |
     ExternalDeclaration | SaveDeclaration | DimensionStatement | Equivalence |
     ParameterStatement | IncludeStatement | DataStatement | IntrinsicStatement |
     ImportStatement | CommonBlock | VariableDeclaration
@@ -57,8 +57,8 @@ InterfaceBlock:
     headers+=ProgramUnit
     'end' 'interface' EOL
 ;
-CustomTypeDeclaration:
-    'type' (((',' scope=Scope)? (',' 'bind' '(' 'c' ')')?)# '::')? name=ID_ EOL
+DerivedTypeDeclaration:
+    'type' (((',' scope=Scope)? (',' BindC)?)# '::')? name=ID_ EOL
     attributes*=DeclarationStatement
     ('contains' EOL
     methods*=MethodDeclaration)?
@@ -83,7 +83,7 @@ VariableDeclaration:
 TypeModifier:
     Intent | Dimension | 'parameter' | 'allocatable' | 'optional' |
     'target' | 'pointer' | 'save' | 'value' | 'public' | 'private' |
-    'external' | 'protected'
+    'external' | 'protected' | BindC | 'nopass'
 ;
 Intent: 'intent' '(' intent=IntentSpec ')';
 IntentSpec: /in *out/ | 'in' | 'out';
@@ -91,11 +91,11 @@ Dimension: 'dimension' '(' dimensions+=DimensionSpec[','] ')';
 DimensionSpec: (from_=Expression? ':' to=Expression?) | to=ExpressionOrStar;
 VariableDefault:
     name=ID_ ('(' dimensions+=DimensionSpec[','] ')' | '*' INT)?
-    ('=' value=Expression | '=>' 'null' '(' ')')?
+    ('=' value=Expression | '=>' ('null' '(' ')' | target=LHS))?
 ;
 FunctionName: OperatorFunction | ID_;
 OperatorFunction: 'operator' '(' name=CustomOperator ')';
-MethodDeclaration: 'procedure' ',' 'pass' '::' local=ID_ '=>' foreign=ID_ EOL;
+MethodDeclaration: 'procedure' (',' 'pass')? '::' local=ID_ '=>' foreign=ID_ EOL;
 
 ExecutableStatement:
     CallStatement | IfBlock | IfStatement | SelectBlock | DoBlock |
@@ -215,6 +215,7 @@ Constant:
 Parenthesised: '(' expression=Expression ')';
 CustomOperator: /\.[a-z]+\./;
 Operator: CustomOperator | /\/\/|>=|<=|\/=|==|>|<|\/|\+|\*\*|\*|-/;
+BindC: 'bind' '(' 'c' (',' 'name' '=' STRING )? ')';
 
 ID_: /[^_\d\W]\w*\b/;
 BOOL_: /\.true\.|\.false\./;
