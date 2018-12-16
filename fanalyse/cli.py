@@ -2,48 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import os
-from pathlib import Path
 from argparse import ArgumentParser
 from multiprocessing import Pool
-from typing import Any, Dict, TypeVar, List
+from pathlib import Path
+from typing import Any, Dict, List
 
 from textx.exceptions import TextXSyntaxError  # type: ignore
 
 from .fortran import fortran_mm, model_to_dict
-
-_T = TypeVar('_T')
-
-DEBUG = os.environ.get('DEBUG')
-
-
-class GraphWithCycles(Exception):
-    pass
-
-
-def topsorted(tree: Dict[_T, List[_T]]) -> List[_T]:
-    idxs = {node: i for i, node in enumerate(tree)}
-    outgoing = [
-        [idxs[child] for child in children]
-        for node, children in tree.items()
-    ]
-    N = len(tree)
-    n_incoming = N*[0]
-    for edges in outgoing:
-        for i in edges:
-            n_incoming[i] += 1
-    L = []
-    S = [i for i in range(N) if n_incoming[i] == 0]
-    while S:
-        i = S.pop()
-        L.append(i)
-        for j in outgoing[i]:
-            n_incoming[j] -= 1
-            if not n_incoming[j]:
-                S.append(j)
-    if sum(n_incoming):
-        raise GraphWithCycles()
-    iidxs = {i: node for node, i in idxs.items()}
-    return [iidxs[i] for i in L]
 
 
 def myprint(s: Any) -> None:
@@ -51,7 +17,7 @@ def myprint(s: Any) -> None:
 
 
 # rethrow KeyboardInterrupt from multiprocessing
-# https://stackoverflow.com/questions/1408356/keyboard-interrupts-with-pythons-multiprocessing-pool
+# https://stackoverflow.com/questions/1408356/keyboard-interrupts-with-pythons-multiprocessing-pool  # noqa B950
 class MyKeyboardInterrupt(Exception):
     pass
 
@@ -60,7 +26,7 @@ def parse_source(filename: str) -> Any:
     try:
         source = Path(filename).read_text()
         model = fortran_mm.model_from_str(source + '\n')
-        model_dict = model_to_dict(model)
+        model_dict = model_to_dict(model)  # type: ignore
     except KeyboardInterrupt as e:
         raise MyKeyboardInterrupt from e
     except TextXSyntaxError as e:
@@ -106,7 +72,7 @@ def parse_cli() -> Dict[str, Any]:
     return vars(parser.parse_args())
 
 
-def main() -> None:
+def cli() -> None:
     try:
         parse(**parse_cli())
     except (KeyboardInterrupt, MyKeyboardInterrupt):

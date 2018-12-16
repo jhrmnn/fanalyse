@@ -1,3 +1,5 @@
+*.pyc
 /.mypy_cache/
-/fastentrypoints.py
 /*.egg-info/
+/poetry.lock
+/*.ipynb
